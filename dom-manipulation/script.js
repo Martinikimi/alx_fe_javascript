@@ -729,3 +729,6 @@ function mergeData() {
     console.log(`Merged ${addedCount} new quotes from server`);
     showNotification(`Data merged successfully! Added ${addedCount} new quotes.`, 'success');
 }
+
+
+quoteDisplay
