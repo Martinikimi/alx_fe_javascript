@@ -172,7 +172,7 @@ function addQuote() {
     updateQuotesList();
     
     // Reset form
-    document.getElementById('newQuoteForm').style.display = 'none';
+    document.getElementById('addQuoteForm').style.display = 'none';
     document.getElementById('newQuoteText').value = '';
     document.getElementById('newQuoteCategory').value = '';
     
@@ -209,7 +209,7 @@ function populateCategories() {
     }
 }
 
-// Filter quotes by category
+// Filter quotes by category - FIXED FUNCTION
 function filterQuotes() {
     const selectedCategory = document.getElementById('categoryFilter').value;
     lastSelectedCategory = selectedCategory;
@@ -219,23 +219,41 @@ function filterQuotes() {
     
     if (selectedCategory === 'all') {
         filteredQuotes = [];
-        document.getElementById('quoteText').textContent = 'Showing all categories';
-        document.getElementById('quoteCategory').textContent = '';
+        // Show a random quote when "All Categories" is selected
+        showRandomQuote();
+        showNotification('Showing all categories', 'info');
     } else {
         filteredQuotes = quotes.filter(quote => quote.category === selectedCategory);
-        document.getElementById('quoteText').textContent = `Showing ${filteredQuotes.length} quotes in "${selectedCategory}"`;
-        document.getElementById('quoteCategory').textContent = '';
+        
+        if (filteredQuotes.length > 0) {
+            // Show a random quote from the filtered category
+            const randomIndex = Math.floor(Math.random() * filteredQuotes.length);
+            const quote = filteredQuotes[randomIndex];
+            document.getElementById('quoteText').textContent = `"${quote.text}"`;
+            document.getElementById('quoteCategory').textContent = `Category: ${quote.category} ${quote.author ? `| By: ${quote.author}` : ''}`;
+            
+            // Highlight the quote in the list
+            highlightQuoteInList(quote.id);
+        } else {
+            // No quotes in this category
+            document.getElementById('quoteText').textContent = `No quotes found in category "${selectedCategory}"`;
+            document.getElementById('quoteCategory').textContent = 'Try selecting a different category or add quotes to this category';
+        }
+        
+        showNotification(`Filtered by: ${selectedCategory} (${filteredQuotes.length} quotes)`, 'info');
     }
     
     updateQuotesList();
-    showNotification(`Filtered by: ${selectedCategory}`, 'info');
 }
 
 // Show all quotes
 function showAllQuotes() {
     document.getElementById('categoryFilter').value = 'all';
+    lastSelectedCategory = 'all';
+    sessionStorage.setItem('lastFilter', 'all');
     filteredQuotes = [];
     updateQuotesList();
+    showRandomQuote();
     showNotification('Showing all quotes', 'info');
 }
 
@@ -247,7 +265,7 @@ function updateQuotesList() {
         : quotes;
     
     if (displayQuotes.length === 0) {
-        quotesList.innerHTML = '<p style="text-align: center; color: #666;">No quotes available. Add some quotes to get started!</p>';
+        quotesList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No quotes available. Add some quotes to get started!</p>';
         return;
     }
     
@@ -283,6 +301,9 @@ function updateQuotesList() {
     html += '</div>';
     
     quotesList.innerHTML = html;
+    
+    // Update statistics with filtered count
+    updateStats();
 }
 
 // Highlight a quote in the list
@@ -298,13 +319,13 @@ function deleteQuote(id) {
         quotes = quotes.filter(quote => quote.id !== id);
         saveQuotes();
         populateCategories();
-        updateQuotesList();
         
         // Update filtered quotes if needed
         if (filteredQuotes.length > 0) {
             filteredQuotes = filteredQuotes.filter(quote => quote.id !== id);
         }
         
+        updateQuotesList();
         showNotification('Quote deleted successfully!', 'success');
         
         // Show new random quote
@@ -380,7 +401,9 @@ function clearLocalStorage() {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
         localStorage.removeItem('quotes');
         localStorage.removeItem('categories');
+        localStorage.removeItem('lastSyncTime');
         sessionStorage.removeItem('lastFilter');
+        sessionStorage.removeItem('lastViewedQuote');
         
         quotes = [...defaultQuotes];
         saveQuotes();
@@ -394,13 +417,29 @@ function clearLocalStorage() {
 
 // Update statistics display
 function updateStats() {
-    document.getElementById('totalQuotes').textContent = quotes.length;
-    document.getElementById('totalCategories').textContent = categories.length;
+    const totalQuotesElement = document.getElementById('totalQuotes');
+    const totalCategoriesElement = document.getElementById('totalCategories');
+    
+    if (totalQuotesElement) {
+        totalQuotesElement.textContent = quotes.length;
+    }
+    
+    if (totalCategoriesElement) {
+        totalCategoriesElement.textContent = categories.length;
+    }
+    
+    // Update storage type display
+    const storageTypeElement = document.getElementById('storageType');
+    if (storageTypeElement) {
+        storageTypeElement.textContent = localStorage.getItem('quotes') ? 'Local Storage' : 'Default';
+    }
 }
 
 // Show notification
 function showNotification(message, type = 'info') {
     const notification = document.getElementById('notification');
+    if (!notification) return;
+    
     notification.textContent = message;
     notification.style.backgroundColor = type === 'error' ? '#f44336' : 
                                        type === 'success' ? '#4CAF50' : 
@@ -434,7 +473,10 @@ function simulateServerSync() {
         sessionStorage.setItem('serverQuotes', JSON.stringify(serverQuotes));
         
         // Show conflict resolution UI
-        document.getElementById('conflictResolution').style.display = 'block';
+        const conflictElement = document.getElementById('conflictResolution');
+        if (conflictElement) {
+            conflictElement.style.display = 'block';
+        }
         showNotification('Conflict detected with server data!', 'warning');
     } else {
         // Normal sync
@@ -453,7 +495,10 @@ function simulateServerSync() {
 // Conflict resolution functions
 function useLocalData() {
     // Server accepts local data
-    document.getElementById('conflictResolution').style.display = 'none';
+    const conflictElement = document.getElementById('conflictResolution');
+    if (conflictElement) {
+        conflictElement.style.display = 'none';
+    }
     showNotification('Using local data. Server updated.', 'success');
 }
 
@@ -468,7 +513,10 @@ function useServerData() {
     populateCategories();
     updateQuotesList();
     
-    document.getElementById('conflictResolution').style.display = 'none';
+    const conflictElement = document.getElementById('conflictResolution');
+    if (conflictElement) {
+        conflictElement.style.display = 'none';
+    }
     showNotification('Server data applied locally.', 'success');
 }
 
@@ -484,6 +532,9 @@ function mergeData() {
     populateCategories();
     updateQuotesList();
     
-    document.getElementById('conflictResolution').style.display = 'none';
+    const conflictElement = document.getElementById('conflictResolution');
+    if (conflictElement) {
+        conflictElement.style.display = 'none';
+    }
     showNotification('Data merged successfully!', 'success');
 }
