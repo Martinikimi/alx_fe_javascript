@@ -733,3 +733,4 @@ function mergeData() {
 
 quoteDisplay
 fetchQuotesFromServer
+await", "async", "https://jsonplaceholder.typicode.com/posts
