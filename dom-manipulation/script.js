@@ -732,3 +732,4 @@ function mergeData() {
 
 
 quoteDisplay
+fetchQuotesFromServer
